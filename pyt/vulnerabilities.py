@@ -4,7 +4,7 @@ from collections import namedtuple
 
 from .base_cfg import AssignmentNode
 from .framework_adaptor import TaintedNode
-from .lattice import Lattice
+from .lattice import Lattice, print_lattice
 from .trigger_definitions_parser import default_trigger_word_file, parse
 from .vars_visitor import VarsVisitor
 from .vulnerability_log import (
@@ -215,9 +215,38 @@ def is_sanitized(sink, sanitiser_dict, lattice):
                 logger.debug("IMPORTANT, sink.cfg_node is %s", sink.cfg_node)
                 logger.debug("IMPORTANT, type(cfg_node) is %s", type(cfg_node))
                 logger.debug("IMPORTANT, type(sink.cfg_node) is %s", type(sink.cfg_node))
+                raise
                 return True
     return False
 
+# def is_unknown(sink, blackbox_assignments, lattice):
+def is_unknown(secondary_nodes, blackbox_assignments):
+    """Check if vuln is unknown by any blackbox call in the blackbox_assignments.
+
+    Args:
+        sink(TriggerNode): TriggerNode of the sink.
+        blackbox_assignments(list): list of blackbox calls.
+
+    Returns:
+        True or False
+    """
+    for blackbox_call in blackbox_assignments:
+        for node in secondary_nodes:
+            logger.debug("node is %s", node)
+            logger.debug("blackbox_call is %s", blackbox_call)
+            logger.debug("type(node) is %s", type(node))
+            logger.debug("type(blackbox_call) is %s", type(blackbox_call))
+
+            if node == blackbox_call:
+                logger.debug("MATCHnode is %s", node)
+                return True            
+        # if lattice.in_constraint(blackbox_call, sink.cfg_node):
+        #     logger.debug("IMPORTANT, blackbox_call is %s", blackbox_call)
+        #     return True
+        # else:
+        #     logger.debug("unimportant blackbox_call is %s", blackbox_call)
+
+    return False
 
 class SinkArgsError(Exception):
     pass
@@ -229,8 +258,9 @@ def get_sink_args(cfg_node):
     return vv.result
 
 
-def get_vulnerability(source, sink, triggers, lattice):
-    """Get vulnerability between source and sink if it exists.
+def get_vulnerability(source, sink, triggers, lattice, blackbox_assignments):
+    """Get vulnerabil
+    # We should have different vuln list for real, sanitised, and unknownity between source and sink if it exists.
 
     Uses triggers to find sanitisers
 
@@ -244,13 +274,19 @@ def get_vulnerability(source, sink, triggers, lattice):
     """
     source_in_sink = lattice.in_constraint(source.cfg_node, sink.cfg_node)
 
-    secondary_in_sink = []
+    logger.debug("secondary_nodes are")
+    for n in source.secondary_nodes:
+        logger.debug("n is %s", n)
+
+    secondary_in_sink = list()
     if source.secondary_nodes:
         secondary_in_sink = [secondary for secondary in source.secondary_nodes
                              if lattice.in_constraint(secondary,
                                                       sink.cfg_node)]
 
     trigger_node_in_sink = source_in_sink or secondary_in_sink
+    logger.debug("source_in_sink is %s", source_in_sink)
+    logger.debug("secondary_in_sink is %s", secondary_in_sink)
 
     sink_args = get_sink_args(sink.cfg_node)
     source_lhs_in_sink_args = source.cfg_node.left_hand_side in sink_args\
@@ -268,9 +304,14 @@ def get_vulnerability(source, sink, triggers, lattice):
         # logger.debug("sink is %s", sink)
         logger.debug("triggers.sanitiser_dict is %s", triggers.sanitiser_dict)
         logger.debug("lattice is %s", lattice)
-        sink_is_sanitised = is_sanitized(sink, triggers.sanitiser_dict,
+        sink_is_sanitised = is_sanitized(sink, 
+                                         triggers.sanitiser_dict,
                                          lattice)
         logger.debug("sink_is_sanitised is %s", sink_is_sanitised)
+
+        vuln_is_unknown = is_unknown(source.secondary_nodes,
+                                     blackbox_assignments)
+        logger.debug("vuln_is_unknown is %s", vuln_is_unknown)
 
         if sink_is_sanitised:
             return SanitisedVulnerability(source.cfg_node, source_trigger_word,
@@ -295,8 +336,9 @@ def find_vulnerabilities_in_cfg(cfg, vulnerability_log, definitions, lattice):
     triggers = identify_triggers(cfg, definitions.sources, definitions.sinks)
     for sink in triggers.sinks:
         for source in triggers.sources:
-            vulnerability = get_vulnerability(source, sink, triggers, lattice)
+            vulnerability = get_vulnerability(source, sink, triggers, lattice, cfg.blackbox_assignments)
             if vulnerability:
+                # We should have different vuln list for real, sanitised, and unknown
                 vulnerability_log.append(vulnerability)
 
 
@@ -315,7 +357,15 @@ def find_vulnerabilities(cfg_list, analysis_type,
     definitions = parse(trigger_word_file)
 
     vulnerability_log = VulnerabilityLog()
+
+    print_lattice(cfg_list, analysis_type)
+
     for cfg in cfg_list:
+        logger.debug("type of is cfg %s", type(cfg))
+        # logger.debug("cfg.blackbox_assignments is %s", cfg.blackbox_assignments)
+        for n in cfg.blackbox_assignments:
+            logger.debug("Blackbox label is %s", n.label)
+
         find_vulnerabilities_in_cfg(cfg, vulnerability_log, definitions,
                                     Lattice(cfg.nodes, analysis_type))
     return vulnerability_log

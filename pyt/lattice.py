@@ -1,4 +1,4 @@
-from .constraint_table import constraint_table
+from .constraint_table import constraint_table, print_table
 
 
 class Lattice:
@@ -49,4 +49,6 @@ def print_lattice(cfg_list, analysis_type):
     print('Lattice:')
     for k, v in l.el2bv.items():
         print(str(k) + ': ' + bin(v))
+
+    print_table(l)
     return l

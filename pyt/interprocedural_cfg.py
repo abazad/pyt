@@ -45,6 +45,8 @@ class InterproceduralVisitor(Visitor):
         self.project_modules = project_modules
         self.local_modules = local_modules
         self.filenames = [filename]
+        self.blackbox_assignments = set()
+        self.blackbox_calls = set()
         self.nodes = list()
         self.function_index = 0
         self.undecided = False
@@ -394,6 +396,7 @@ class InterproceduralVisitor(Visitor):
 
             # logger.debug("So we can't find the def of node.func %s", node.func)
             logger.debug("type of node is type %s", type(node))
+            return self.add_blackbox_call(node)
             # raise
             # logger.debug("type of node.func %s", node.func)
 
@@ -668,4 +671,4 @@ def interprocedural(node, project_modules, local_modules, filename,
                                      project_modules,
                                      local_modules, filename,
                                      module_definitions)
-    return CFG(visitor.nodes)
+    return CFG(visitor.nodes, visitor.blackbox_assignments)

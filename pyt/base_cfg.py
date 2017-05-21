@@ -201,8 +201,9 @@ class Function():
 
 
 class CFG():
-    def __init__(self, nodes):
+    def __init__(self, nodes, blackbox_assignments):
         self.nodes = nodes
+        self.blackbox_assignments = blackbox_assignments
 
     def __repr__(self):
         output = ''
@@ -513,9 +514,9 @@ class Visitor(ast.NodeVisitor):
         rhs_visitor.visit(ast_node.value)
 
         call = self.visit(ast_node.value)
-        logger.debug("call is %s", call)
-        logger.debug("type(call) is %s", type(call))
-        raise
+        logger.debug("CRITICAL call is %s", call)
+        logger.debug("CRITICAL type(call) is %s", type(call))
+        # raise
 
         call_label = ''
         call_assignment = None
@@ -526,6 +527,9 @@ class Visitor(ast.NodeVisitor):
         else: #  assignment to builtin
             call_label = call.label
             call_assignment = AssignmentNode(left_hand_label + ' = ' + call_label, left_hand_label, ast_node, rhs_visitor.result, line_number=ast_node.lineno, path=self.filenames[-1])
+        
+        if call in self.blackbox_calls:
+            self.blackbox_assignments.add(call_assignment)
 
         self.nodes.append(call_assignment)
 
@@ -595,11 +599,23 @@ class Visitor(ast.NodeVisitor):
             last_node = self.visit(node.iter)
             last_node.connect(for_node)
 
-
         return self.loop_node_skeleton(for_node, node)
 
     def visit_Expr(self, node):
         return self.visit(node.value)
+
+    def add_blackbox_call(self, node):
+        label = LabelVisitor()
+        label.visit(node)
+
+        blackbox_call = Node(label.result, node, line_number=node.lineno, path=self.filenames[-1])
+        if not self.undecided:
+            # self.blackbox_calls.append(blackbox_call)
+            self.nodes.append(blackbox_call)
+        self.blackbox_calls.add(blackbox_call)        
+        self.undecided = False
+
+        return blackbox_call
 
     def add_builtin(self, node):
         label = LabelVisitor()
