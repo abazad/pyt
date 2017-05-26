@@ -14,6 +14,8 @@ def index():
 def menu():
     param = request.form['suggestion']
     command = 'echo ' + param + ' >> ' + 'menu.txt'
+    hey = 'echo ' + param + ' >> ' + 'menu.txt'
+    yo = 'echo ' + hey + ' >> ' + 'menu.txt'
 
     subprocess.call(command, shell=True)
 

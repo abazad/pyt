@@ -134,6 +134,8 @@ class AssignmentNode(Node):
         super().__init__(label, ast_node, line_number=line_number, path=path)
         self.left_hand_side = left_hand_side
         self.right_hand_side_variables = right_hand_side_variables
+        # Only set True in assignment_call_node()
+        self.blackbox = False
 
     def __repr__(self):
         output_string = super().__repr__()
@@ -527,9 +529,10 @@ class Visitor(ast.NodeVisitor):
         else: #  assignment to builtin
             call_label = call.label
             call_assignment = AssignmentNode(left_hand_label + ' = ' + call_label, left_hand_label, ast_node, rhs_visitor.result, line_number=ast_node.lineno, path=self.filenames[-1])
-        
+
         if call in self.blackbox_calls:
             self.blackbox_assignments.add(call_assignment)
+            call_assignment.blackbox = True
 
         self.nodes.append(call_assignment)
 
@@ -612,7 +615,7 @@ class Visitor(ast.NodeVisitor):
         if not self.undecided:
             # self.blackbox_calls.append(blackbox_call)
             self.nodes.append(blackbox_call)
-        self.blackbox_calls.add(blackbox_call)        
+        self.blackbox_calls.add(blackbox_call)
         self.undecided = False
 
         return blackbox_call

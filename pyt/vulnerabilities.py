@@ -9,6 +9,7 @@ from .trigger_definitions_parser import default_trigger_word_file, parse
 from .vars_visitor import VarsVisitor
 from .vulnerability_log import (
     SanitisedVulnerability,
+    UnknownVulnerability,
     Vulnerability,
     VulnerabilityLog
 )
@@ -215,7 +216,7 @@ def is_sanitized(sink, sanitiser_dict, lattice):
                 logger.debug("IMPORTANT, sink.cfg_node is %s", sink.cfg_node)
                 logger.debug("IMPORTANT, type(cfg_node) is %s", type(cfg_node))
                 logger.debug("IMPORTANT, type(sink.cfg_node) is %s", type(sink.cfg_node))
-                raise
+                # raise
                 return True
     return False
 
@@ -239,14 +240,14 @@ def is_unknown(secondary_nodes, blackbox_assignments):
 
             if node == blackbox_call:
                 logger.debug("MATCHnode is %s", node)
-                return True            
+                return blackbox_call
         # if lattice.in_constraint(blackbox_call, sink.cfg_node):
         #     logger.debug("IMPORTANT, blackbox_call is %s", blackbox_call)
         #     return True
         # else:
         #     logger.debug("unimportant blackbox_call is %s", blackbox_call)
 
-    return False
+    return None
 
 class SinkArgsError(Exception):
     pass
@@ -279,6 +280,10 @@ def get_vulnerability(source, sink, triggers, lattice, blackbox_assignments):
         logger.debug("n is %s", n)
 
     secondary_in_sink = list()
+    # import ipdb
+
+    # ipdb.set_trace()
+
     if source.secondary_nodes:
         secondary_in_sink = [secondary for secondary in source.secondary_nodes
                              if lattice.in_constraint(secondary,
@@ -288,9 +293,31 @@ def get_vulnerability(source, sink, triggers, lattice, blackbox_assignments):
     logger.debug("source_in_sink is %s", source_in_sink)
     logger.debug("secondary_in_sink is %s", secondary_in_sink)
 
+
+
+    logger.debug("source.secondary_nodes is %s", source.secondary_nodes)
+
+    for secondary in source.secondary_nodes:
+        if lattice.in_constraint(secondary, sink.cfg_node):
+            logger.debug("FOOFIN CONSTRAINT s is %s", secondary)
+        else:
+            logger.debug("%s was not in constraint", secondary)
+
+
     sink_args = get_sink_args(sink.cfg_node)
     source_lhs_in_sink_args = source.cfg_node.left_hand_side in sink_args\
                               if sink_args else None
+
+    evil_node = None
+    for node in secondary_in_sink:
+        if sink_args and node.left_hand_side in sink_args:
+            logger.error("evil node is %s", node)
+            evil_node = node
+
+    # if evil_node:
+    #     for node in secondary_in_sink:
+    #         if evil_node.left_hand_side in node.right_hand_side_variables:
+
 
     secondary_nodes_in_sink_args = any(True for node in secondary_in_sink
                                        if node.left_hand_side in sink_args)\
@@ -304,20 +331,25 @@ def get_vulnerability(source, sink, triggers, lattice, blackbox_assignments):
         # logger.debug("sink is %s", sink)
         logger.debug("triggers.sanitiser_dict is %s", triggers.sanitiser_dict)
         logger.debug("lattice is %s", lattice)
-        sink_is_sanitised = is_sanitized(sink, 
+        sink_is_sanitised = is_sanitized(sink,
                                          triggers.sanitiser_dict,
                                          lattice)
         logger.debug("sink_is_sanitised is %s", sink_is_sanitised)
 
-        vuln_is_unknown = is_unknown(source.secondary_nodes,
-                                     blackbox_assignments)
-        logger.debug("vuln_is_unknown is %s", vuln_is_unknown)
+        blackbox_assignment = is_unknown(source.secondary_nodes,
+                                         blackbox_assignments)
+        logger.debug("blackbox_assignment is %s", blackbox_assignment)
 
         if sink_is_sanitised:
             return SanitisedVulnerability(source.cfg_node, source_trigger_word,
                                           sink.cfg_node, sink_trigger_word,
                                           sink.sanitisers,
                                           source.secondary_nodes)
+        elif blackbox_assignment:
+            return UnknownVulnerability(source.cfg_node, source_trigger_word,
+                                        sink.cfg_node, sink_trigger_word,
+                                        blackbox_assignment,
+                                        source.secondary_nodes)
         else:
             return Vulnerability(source.cfg_node, source_trigger_word,
                                  sink.cfg_node, sink_trigger_word,
