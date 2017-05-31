@@ -140,7 +140,9 @@ class AssignmentNode(Node):
     def __repr__(self):
         output_string = super().__repr__()
         output_string += '\n'
-        return ''.join((output_string, 'left_hand_side:\t', str(self.left_hand_side), '\n', 'right_hand_side_variables:\t', str(self.right_hand_side_variables)))
+        return ''.join((output_string,
+                        'left_hand_side:\t', str(self.left_hand_side), '\n',
+                        'right_hand_side_variables:\t', str(self.right_hand_side_variables)))
 
 
 class RestoreNode(AssignmentNode):
