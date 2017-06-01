@@ -377,30 +377,9 @@ class InterproceduralVisitor(Visitor):
                 raise Exception('Definition was neither FunctionDef or ' +
                                 'ClassDef, cannot add the function ')
         else:
-            # Mark it as a sanitiser if we don't have the definition
-            # raise
-            # logger.debug("So we can't find the def of node.func %s", node.func)
-            if isinstance(node.func, ast.Name):
-                logger.debug("(name) So we can't find the def of node.func.id %s", node.func.id)
-            elif isinstance(node.func, ast.alias):
-                logger.debug("(alias) So we can't find the def of node.func.name %s", node.func.name)
-            elif isinstance(node.func, ast.Attribute):
-                # assuming attribute has a Name as it's value
-                try:
-                    logger.debug("(attribute) So we can't find the def of node.func.value.id %s", node.func.value.id)
-                except AttributeError:
-                    # logger.debug("(attribute's attribute) So we can't find the def of node.func.value.id %s", node.func.value.value.id)
-                    logger.debug("AHHH So we can't find the def of node.func %s", node.func)
-            else:
-                logger.debug("AHHH So we can't find the def of node.func %s", node.func)
-
-            # logger.debug("So we can't find the def of node.func %s", node.func)
-            logger.debug("type of node is type %s", type(node))
+            # Mark it as a blackbox if we don't have the definition
             return self.add_blackbox_call(node)
-            # raise
-            # logger.debug("type of node.func %s", node.func)
 
-        # RETURN SOMETHING ELSE IF NO DEF
         return self.add_builtin(node)
 
     def add_class(self, call_node, def_node):

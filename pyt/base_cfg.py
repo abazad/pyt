@@ -518,9 +518,6 @@ class Visitor(ast.NodeVisitor):
         rhs_visitor.visit(ast_node.value)
 
         call = self.visit(ast_node.value)
-        logger.debug("CRITICAL call is %s", call)
-        logger.debug("CRITICAL type(call) is %s", type(call))
-        # raise
 
         call_label = ''
         call_assignment = None
@@ -615,7 +612,6 @@ class Visitor(ast.NodeVisitor):
 
         blackbox_call = Node(label.result, node, line_number=node.lineno, path=self.filenames[-1])
         if not self.undecided:
-            # self.blackbox_calls.append(blackbox_call)
             self.nodes.append(blackbox_call)
         self.blackbox_calls.add(blackbox_call)
         self.undecided = False

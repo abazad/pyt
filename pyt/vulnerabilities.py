@@ -220,7 +220,6 @@ def is_sanitized(sink, sanitiser_dict, lattice):
                 return True
     return False
 
-# def is_unknown(sink, blackbox_assignments, lattice):
 def is_unknown(secondary_nodes, blackbox_assignments):
     """Check if vuln is unknown by any blackbox call in the blackbox_assignments.
 
